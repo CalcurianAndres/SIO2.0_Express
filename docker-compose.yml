@@ -1,13 +1,15 @@
 version: "3.9"
 services:
-  sio:
+  siob:
     build: .
     ports:
-      - "80:3000"
+      - "3000:3000"
     environment:
       - MONGODB_URI=mongodb://Sio:SIO2023@DBMongo:27017/SIO?authSource=admin
-    links:
+      - PORT_URI=3000
+    depends_on:
       - DBMongo
+
   DBMongo:
     image: mongo
     ports:

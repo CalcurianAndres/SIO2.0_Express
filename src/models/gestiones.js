@@ -2,50 +2,54 @@
 const mongoose = require('mongoose');
 
 const gestionSchema = new mongoose.Schema({
-    borrado:{
-        type:Boolean,
-        default:false,
+    borrado: {
+        type: Boolean,
+        default: false,
     },
-    orden:{
+    orden: {
         type: mongoose.Schema.Types.ObjectId,
         ref: 'op', // Relación con otra colección llamada "Producto"
     },
-    fase:{
-        type:Number
+    fase: {
+        type: Number
     },
-    usuario:{
-        type:String,
+    usuario: {
+        type: String,
     },
-    fecha:{
-        type:String,
+    fecha: {
+        type: String,
     },
-    inicio:{
-        type:String,
+    inicio: {
+        type: String,
     },
-    fin:{
-        type:String,
+    fin: {
+        type: String,
     },
-    hojas:{
-        type:Number,
+    hojas: {
+        type: Number,
     },
-    productos:{
-        type:Number,
+    productos: {
+        type: Number,
     },
-    paletas:{
-        type:Number,
+    paletas: {
+        type: Number,
     },
-    team:{
-        type:Array,
+    team: {
+        type: Array,
     },
-    defectos:[{
-        paleta:{type:Number},
-        defectos:{type:Array}
+    defectos: [{
+        paleta: { type: Number },
+        defectos: { type: Array }
     }],
-    observaciones:{
-        type:String,
+    observaciones: {
+        type: String,
     },
-},{
-    timestamps:true
+    etiquetado: [{
+        type: Date,
+    }]
+
+}, {
+    timestamps: true
 })
 
 module.exports = mongoose.model('gestion', gestionSchema)

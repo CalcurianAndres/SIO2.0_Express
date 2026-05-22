@@ -1,0 +1,14 @@
+{
+  "tareas": [
+    {
+      "fecha": "05/05/2026",
+      "horas": 8,
+      "descripcion": "Despacho de material"
+    },
+    {
+      "fecha": "08/05/2026",
+      "horas": 8,
+      "descripcion": "Certificado de calidad"
+    }
+  ]
+}
