@@ -1,5 +1,6 @@
 version: "3.9"
 services:
+  # ─── Backend (Express + Socket.io) ───
   siob:
     build: .
     ports:
@@ -10,6 +11,7 @@ services:
     depends_on:
       - DBMongo
 
+  # ─── Base de datos ───
   DBMongo:
     image: mongo
     ports:
@@ -19,6 +21,17 @@ services:
       - MONGO_INITDB_ROOT_PASSWORD=SIO2023
     volumes:
       - mongo-data:/data/db
+
+  # ─── Frontend (Angular / nginx) ───
+  # Descomentar para servir SIOF en contenedor separado.
+  # Requiere build previo de SIOF (ver setup.sh).
+  # Si solo se necesita backend + DB, comentar esta seccion.
+  # siof:
+  #   build: ../SIOF
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - siob
 
 volumes:
   mongo-data:
