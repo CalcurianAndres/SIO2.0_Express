@@ -46,7 +46,7 @@ let OrdenPoligraficaSchema = new Schema({
 
 OrdenPoligraficaSchema.pre('save', function(next){
     var doc = this;
-    OCPI.findByIdAndUpdate({_id: 'OCPi'}, {$inc: {seq: 1}}, {new: true, upset:true}).then(function(OCPI) {
+    OCPI.findByIdAndUpdate({_id: 'OCPi'}, {$inc: {seq: 1}}, {new: true, upsert: true}).then(function(OCPI) {
         doc.numero = OCPI.seq;
         next();
     })

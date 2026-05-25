@@ -4,7 +4,12 @@ const {DocumentDefinition, Table, Cell, Txt, Img, Stack, QR} = require('pdfmake-
 const Pdfmake = require('pdfmake');
 const fs = require('fs')
 const path = require('path');
-const printer = require('@thiagoelg/node-printer');
+let printer;
+try {
+  printer = require('@thiagoelg/node-printer');
+} catch (e) {
+  printer = { getDefaultPrinterName: () => 'N/A' };
+}
 
 
 const {getDefaultPrinter, print } = require('pdf-to-printer')
