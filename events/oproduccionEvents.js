@@ -246,6 +246,37 @@ export default (socket, io) => {
         await EmitirOP();
     });
 
+    socket.on('CLIENTE:CertificarOP', async (data) => {
+        try {
+            const ordenCertificada = await op.findByIdAndUpdate(
+                data._id,
+                { certificado: true, fecha_certificado: new Date() },
+                { new: true }
+            );
+
+            if (ordenCertificada) {
+                console.log('OP certificada:', ordenCertificada.numero_op);
+                socket.emit('SERVIDOR:enviaMensaje', {
+                    mensaje: 'OP certificada correctamente',
+                    icon: 'success'
+                });
+            } else {
+                socket.emit('SERVIDOR:enviaMensaje', {
+                    mensaje: 'No se encontró la orden de producción',
+                    icon: 'error'
+                });
+            }
+        } catch (error) {
+            console.error('Error al certificar OP:', error);
+            socket.emit('SERVIDOR:enviaMensaje', {
+                mensaje: 'Error al certificar la orden de producción',
+                icon: 'error'
+            });
+        }
+
+        await EmitirOP();
+    });
+
     socket.on('CLIENTE:NuevaGestion', async (data) => {
         const nuevaGestion = new gestion(data);
 

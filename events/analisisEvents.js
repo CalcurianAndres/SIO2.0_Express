@@ -5,6 +5,7 @@ import AnalisisPads from "../src/models/analisis-pads";
 import AnalisisOtros from "../src/models/analisis-otros";
 import recepcion from "../src/models/recepcion";
 import requisiciones from '../src/models/requisicion'
+import op from '../src/models/ordenProduccion'
 
 export default (socket, io) => {
 
@@ -364,5 +365,85 @@ export default (socket, io) => {
       socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Hubo un error en el registro del analisis', icon: 'error' });
     }
     EmitirAnalisisOtros()
+  });
+
+  socket.on('CLIENTE:BuscarAnalisisMateriaPrimaOP', async (data) => {
+    try {
+      const orden = await op.findById(data.opId)
+        .populate('tinta.tinta')
+        .populate('sustrato.sustrato')
+        .populate('barniz.barniz')
+        .populate('pega.pega');
+
+      if (!orden) {
+        socket.emit('SERVER:AnalisisMateriaPrimaOP', []);
+        return;
+      }
+
+      const materialIds = [];
+      if (orden.tinta) {
+        orden.tinta.forEach(t => {
+          if (t.tinta?._id) materialIds.push(t.tinta._id.toString());
+        });
+      }
+      if (orden.sustrato?.sustrato?._id) materialIds.push(orden.sustrato.sustrato._id.toString());
+      if (orden.barniz?.barniz?._id) materialIds.push(orden.barniz.barniz._id.toString());
+      if (orden.pega?.pega?._id) materialIds.push(orden.pega.pega._id.toString());
+
+      const recepcionesDocs = await recepcion.find({
+        'materiales.material': { $in: materialIds }
+      }).populate('materiales.material');
+
+      const results = [];
+
+      for (const matId of materialIds) {
+        let found = false;
+        for (const rec of recepcionesDocs) {
+          for (const matGroup of rec.materiales) {
+            for (const entry of matGroup) {
+              if (entry.material?._id?.toString() === matId && entry.analisis) {
+                let analisisDoc = null;
+                for (const Model of [AnalisisTinta, AnalisisSustrato, AnalisisCajas, AnalisisPads, AnalisisOtros]) {
+                  analisisDoc = await Model.findById(entry.analisis).lean();
+                  if (analisisDoc) break;
+                }
+                results.push({
+                  material: entry.material,
+                  lote: entry.lote || 'N/A',
+                  analisisId: entry.analisis,
+                  resultado: analisisDoc?.resultado?.resultado || 'Sin resultado',
+                  fecha: analisisDoc?.updatedAt || analisisDoc?.createdAt || null,
+                });
+                found = true;
+                break;
+              }
+            }
+            if (found) break;
+          }
+          if (found) break;
+        }
+        if (!found) {
+          let mat = null;
+          for (const t of orden.tinta || []) {
+            if (t.tinta?._id?.toString() === matId) { mat = t.tinta; break; }
+          }
+          if (!mat && orden.sustrato?.sustrato?._id?.toString() === matId) mat = orden.sustrato.sustrato;
+          if (!mat && orden.barniz?.barniz?._id?.toString() === matId) mat = orden.barniz.barniz;
+          if (!mat && orden.pega?.pega?._id?.toString() === matId) mat = orden.pega.pega;
+          results.push({
+            material: mat,
+            lote: 'N/A',
+            analisisId: null,
+            resultado: 'Sin análisis',
+            fecha: null,
+          });
+        }
+      }
+
+      socket.emit('SERVER:AnalisisMateriaPrimaOP', results);
+    } catch (error) {
+      console.error('Error al buscar análisis de materia prima:', error);
+      socket.emit('SERVER:AnalisisMateriaPrimaOP', []);
+    }
   });
 }

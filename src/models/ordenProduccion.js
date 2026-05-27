@@ -75,7 +75,14 @@ let OPSchema = new Schema([{
         maquina:{type:Schema.Types.ObjectId, ref:'maquina'},
         fases:{type:Array},
         nombre:{type:String}
-    }]
+    }],
+    certificado:{
+        type:Boolean,
+        default:false
+    },
+    fecha_certificado:{
+        type:Date
+    }
 
 }],{
     timestamps:true
