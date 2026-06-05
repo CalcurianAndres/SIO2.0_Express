@@ -32,6 +32,8 @@ let OrdenPoligraficaSchema = new Schema({
         precio: {type: Number},
         alto:{type:Number},
         ancho:{type:Number},
+        gramaje:{type:String},
+        calibre:{type:String},
         unidad: {type: String,
                 enum: ['L', 'kg', 'Und','t'],
                 }
