@@ -8,6 +8,18 @@ var OCPoligrafica_iterador = new mongoose.Schema({
 
 var OCPI = mongoose.model('OCPI', OCPoligrafica_iterador);
 
+function getAnio() {
+    return new Date().getFullYear().toString().slice(-2);
+}
+
+function getSeqInicial() {
+    return parseInt(getAnio() + '000000');
+}
+
+function getCounterId() {
+    return 'OCPi_' + getAnio();
+}
+
 
 let OrdenPoligraficaSchema = new Schema({
     numero:{
@@ -48,8 +60,17 @@ let OrdenPoligraficaSchema = new Schema({
 
 OrdenPoligraficaSchema.pre('save', function(next){
     var doc = this;
-    OCPI.findByIdAndUpdate({_id: 'OCPi'}, {$inc: {seq: 1}}, {new: true, upsert: true}).then(function(OCPI) {
-        doc.numero = OCPI.seq;
+    var counterId = getCounterId();
+    var seqInicial = getSeqInicial();
+    OCPI.findOneAndUpdate(
+        {_id: counterId},
+        {
+            $inc: {seq: 1},
+            $setOnInsert: {_id: counterId, seq: seqInicial}
+        },
+        {new: true, upsert: true}
+    ).then(function(counter) {
+        doc.numero = counter.seq;
         next();
     })
     .catch(function(error) {

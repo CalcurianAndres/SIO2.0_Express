@@ -27,6 +27,9 @@ let FabricanteSchema = new Schema([{
         type:Schema.Types.ObjectId,
         ref: 'grupo'
     }],
+    identificacion_fiscal:{
+        type:String,
+    },
 
 }],{
     timestamps:true

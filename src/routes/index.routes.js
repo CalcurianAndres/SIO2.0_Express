@@ -7,5 +7,6 @@ app.use ( require('./upload.routes'));
 app.use ( require('./imagenes.routes'));
 app.use ( require('./subscription.routes'));
 app.use ( require('./etiquetas.routes'));
+app.use ( require('./proxy.routes'));
 
 module.exports = app;

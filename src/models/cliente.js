@@ -30,7 +30,9 @@ const ClienteSchema = new Schema({
     }],
     almacenes:[
         {
-            nombre:{type:String, required:true}
+            nombre:{type:String, required:true},
+            lat:{type:Number},
+            lng:{type:Number},
         }
     ]
 },{

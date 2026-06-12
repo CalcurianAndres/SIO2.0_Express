@@ -11,9 +11,9 @@ import cors from 'cors';
 import { connectDB } from './db'
 connectDB();
 
-// Habilitar CORS para todos los orígenes
+// CORS — refleja el origen para permitir credentials
 app.use(cors({
-    origin: '*',
+    origin: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,

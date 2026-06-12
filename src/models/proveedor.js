@@ -26,7 +26,16 @@ let ProveedorSchema = new Schema([{
     fabricantes:[{
         type:Schema.Types.ObjectId,
         ref: 'fabricante'
-    }]
+    }],
+    identificacion_fiscal:{
+        type:String,
+    },
+    pais:{
+        type:String,
+    },
+    estado:{
+        type:String,
+    },
 
 }],{
     timestamps:true

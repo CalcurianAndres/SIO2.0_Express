@@ -1,0 +1,50 @@
+version: "3.9"
+
+services:
+  # ─── Base de datos ───
+  DBMongo:
+    image: mongo
+    ports:
+      - "27017:27017"
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=Sio
+      - MONGO_INITDB_ROOT_PASSWORD=SIO2023
+    volumes:
+      - mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongosh --quiet
+      interval: 10s
+      retries: 5
+
+  # ─── Backend (Express + Socket.io) ───
+  siob:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGODB_URI=mongodb://Sio:SIO2023@DBMongo:27017/SIO?authSource=admin
+      - PORT_URI=3000
+    depends_on:
+      DBMongo:
+        condition: service_healthy
+    volumes:
+      - .:/app
+      - /app/node_modules
+
+  # ─── Frontend (Angular dev server) ───
+  siof:
+    build:
+      context: ../SIO2.O_Angular
+      dockerfile: Dockerfile.dev
+    ports:
+      - "4200:4200"
+    depends_on:
+      - siob
+    volumes:
+      - ../SIO2.O_Angular:/app
+      - /app/node_modules
+
+volumes:
+  mongo-data:
