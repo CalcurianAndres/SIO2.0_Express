@@ -22,9 +22,15 @@ let ContratacionSchema = new Schema([{
         },
         de: { 
           type:Schema.Types.ObjectId,
-           ref: 'areas'
+           ref: 'areas',
+           default: null
          },
         sueldo: { type: String, },
+        tasa: { type: Number, },
+        activo: {
+          type: Boolean,
+          default: true,
+        },
         trabajador: {
            type:Schema.Types.ObjectId,
            ref: 'trabajador'

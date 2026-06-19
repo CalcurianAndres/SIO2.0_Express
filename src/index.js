@@ -6,18 +6,17 @@ import {PORT_URI} from './config'
 import fs from 'fs';
 
 import sockets from './sockets';
-import cors from 'cors';
 
 import { connectDB } from './db'
 connectDB();
 
-// CORS — refleja el origen para permitir credentials
-app.use(cors({
-    origin: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-    credentials: true,
-  }));
+// Safety net: capturar promesas rechazadas no manejadas para evitar crash del proceso
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('⚠️ Unhandled Rejection at:', promise, 'reason:', reason);
+});
+process.on('uncaughtException', (error) => {
+    console.error('❌ Uncaught Exception:', error);
+});
 
 // SSL opcional — si no encuentra los certs, cae a HTTP
 let server;
@@ -45,7 +44,12 @@ try {
 
 const HttpServer = server.listen(PORT_URI || 3000)
 console.log('✅ Server is listening on port: ', PORT_URI || 3000)
-const io = new WebSocketServer(HttpServer)
+const io = new WebSocketServer(HttpServer, {
+    cors: {
+        origin: true,
+        credentials: true,
+    },
+})
 const webPush = require('web-push');
 const vapidConfig = require('./Keys/VapidKey');
 

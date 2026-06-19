@@ -30,7 +30,7 @@ let TrabajadorSchema = new Schema([{
     domicilio: { type: String, },
     telefono: { type: String, },
     celular: { type: String, },
-    foto: {type: String, default:'no-image' }
+    foto: {type: String, default: null }
   },
   informacion_adicional: {
     referencias: [{
@@ -91,9 +91,11 @@ let TrabajadorSchema = new Schema([{
     },
     de: { 
       type:Schema.Types.ObjectId,
-       ref: 'areas'
+       ref: 'areas',
+       default: null
      },
-    sueldo: { type: String, }
+    sueldo: { type: String, },
+    tasa: { type: Number, }
   }
 }],{
   timestamps:true

@@ -9,3 +9,5 @@ export const PORT_URI = process.env.PORT_URI || 3000
 export const EXP = process.env.EXP || '2d'
 
 export const SEED = process.env.SEED || 'Viva-Dios-la-Libertad-y-los-pueblos-libres'
+
+export const TASA_API_URL = process.env.TASA_API_URL || ''

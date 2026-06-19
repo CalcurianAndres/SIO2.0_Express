@@ -24,6 +24,7 @@ import recepcionEvents from '../events/recepcionEvents'
 import requisicionEvents from '../events/requisicionEvents';
 import trabajadorEvents from '../events/trabajadorEvents';
 import bobinaEvents from '../events/bobinaEvents';
+import tasaEvents from '../events/tasaEvents';
 
 export default function configureEvents(io) {
     io.on('connection', (socket) => {
@@ -54,6 +55,7 @@ export default function configureEvents(io) {
         trabajadorEvents(socket,io)
         bobinaEvents(socket, io)
         notificacionesEvents(socket, io)
+        tasaEvents(socket, io)
     });
 
     

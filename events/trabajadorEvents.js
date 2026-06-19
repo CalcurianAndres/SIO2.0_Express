@@ -1,9 +1,29 @@
 import trabajador from '../src/models/trabajador'
 import Contratacion from '../src/models/contrataciones'
+
+const stringId = (value) => {
+    if (!value) return ''
+    if (typeof value === 'string') return value
+    if (value.toString) return value.toString()
+    return ''
+}
+
+const contratosSonIguales = (a, b) => {
+    if (!a || !b) return false
+    return (
+        stringId(a.departamento) === stringId(b.departamento) &&
+        stringId(a.cargo) === stringId(b.cargo) &&
+        stringId(a.de) === stringId(b.de) &&
+        String(a.sueldo || '') === String(b.sueldo || '') &&
+        Number(a.tasa || 0) === Number(b.tasa || 0)
+    )
+}
+
 export default(socket, io) => {
-    const EmitirTrabajador = async () => {
+    const EmitirTrabajador = async (incluirBorrados = false) => {
         try{
-            const Trabajador = await trabajador.find({ borrado: false })
+            const filtro = incluirBorrados ? {} : { borrado: false }
+            const Trabajador = await trabajador.find(filtro)
                                                 .populate('contratacion.departamento')
                                                 .populate('contratacion.cargo')
                                                 .populate('contratacion.de')
@@ -19,46 +39,68 @@ export default(socket, io) => {
             console.log('Error en la emisión de los trabajadores:', err)
     }}
 
-    socket.on('CLIENTE:Trabajador', async() => {
+    socket.on('CLIENTE:Trabajador', async(payload) => {
         try{
-            EmitirTrabajador();
+            const incluirBorrados = payload && payload.incluirBorrados === true
+            EmitirTrabajador(incluirBorrados)
         }catch(err){
             console.log('Error no se pudo realizar la llamada a la emisión de trabajadores:', err)
         }
     })
 
+    const crearContratacionActiva = async (dataContratacion, trabajadorId) => {
+        const nueva = new Contratacion({
+            fecha: dataContratacion.fecha || new Date(),
+            departamento: dataContratacion.departamento || null,
+            cargo: dataContratacion.cargo || null,
+            de: dataContratacion.de || null,
+            sueldo: dataContratacion.sueldo || '',
+            tasa: dataContratacion.tasa || 0,
+            activo: true,
+            trabajador: trabajadorId,
+        })
+        await nueva.save()
+        return nueva
+    }
+
+    const desactivarContratacionesAnteriores = async (trabajadorId) => {
+        await Contratacion.updateMany(
+            { trabajador: trabajadorId, activo: true },
+            { activo: false }
+        )
+    }
+
     socket.on('CLIENTE:nuevoTrabajador', async (data) => {
     try {
+        const dataContratacion = data.contratacion || {}
+
         if (data._id) {
             const existingWorker = await trabajador.findById(data._id);
 
             if (existingWorker) {
-                const existingContracts = JSON.stringify(existingWorker.contratacion);
-                const newContracts = JSON.stringify(data.contratacion);
+                const contratoCambio = !contratosSonIguales(existingWorker.contratacion, dataContratacion)
 
-                if (existingContracts !== newContracts) {
-                    // Verificar si ya existe una contratación idéntica
-                    const existingContract = await Contratacion.findOne({
-                        fecha: data.contratacion.fecha,
-                        departamento: data.contratacion.departamento,
-                        cargo: data.contratacion.cargo,
-                        de: data.contratacion.de,
-                        sueldo: data.contratacion.sueldo,
-                        trabajador: data._id
-                    });
+                if (contratoCambio) {
+                    await desactivarContratacionesAnteriores(data._id)
+                    await crearContratacionActiva(dataContratacion, data._id)
+                } else if (dataContratacion.tasa && Number(existingWorker.contratacion?.tasa || 0) !== Number(dataContratacion.tasa)) {
+                    // Solo cambió la tasa: actualizar el contrato activo actual
+                    await Contratacion.updateOne(
+                        { trabajador: data._id, activo: true },
+                        { tasa: dataContratacion.tasa }
+                    )
+                }
 
-                    if (!existingContract) {
-                        // Guardar la nueva contratación en el esquema contrataciones
-                        const newContratacion = new Contratacion({
-                            fecha: data.contratacion.fecha,
-                            departamento: data.contratacion.departamento,
-                            cargo: data.contratacion.cargo,
-                            de: data.contratacion.de,
-                            sueldo: data.contratacion.sueldo,
-                            trabajador: data._id
-                        });
-
-                        await newContratacion.save();
+                // Recuperar el contrato activo para sincronizar el subdocumento del trabajador
+                const contratoActivo = await Contratacion.findOne({ trabajador: data._id, activo: true })
+                if (contratoActivo) {
+                    data.contratacion = {
+                        fecha: contratoActivo.fecha,
+                        departamento: contratoActivo.departamento,
+                        cargo: contratoActivo.cargo,
+                        de: contratoActivo.de,
+                        sueldo: contratoActivo.sueldo,
+                        tasa: contratoActivo.tasa,
                     }
                 }
 
@@ -75,31 +117,21 @@ export default(socket, io) => {
                 const savedTrabajador = await Trabajador.save();
                 console.log('Se creó el registro nuevo trabajador');
                 socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se registró nuevo trabajador', icon: 'success' });
-                EmitirTrabajador();
 
-                // Verificar si ya existe una contratación idéntica
-                const existingContract = await Contratacion.findOne({
-                    fecha: data.contratacion.fecha,
-                    departamento: data.contratacion.departamento,
-                    cargo: data.contratacion.cargo,
-                    de: data.contratacion.de,
-                    sueldo: data.contratacion.sueldo,
-                    trabajador: savedTrabajador._id
-                });
+                const contratoActivo = await crearContratacionActiva(dataContratacion, savedTrabajador._id)
 
-                if (!existingContract) {
-                    // Guardar la contratación en el esquema contrataciones
-                    const newContratacion = new Contratacion({
-                        fecha: data.contratacion.fecha,
-                        departamento: data.contratacion.departamento,
-                        cargo: data.contratacion.cargo,
-                        de: data.contratacion.de,
-                        sueldo: data.contratacion.sueldo,
-                        trabajador: savedTrabajador._id
-                    });
-
-                    await newContratacion.save();
+                // Sincronizar el subdocumento del trabajador con el contrato activo creado
+                savedTrabajador.contratacion = {
+                    fecha: contratoActivo.fecha,
+                    departamento: contratoActivo.departamento,
+                    cargo: contratoActivo.cargo,
+                    de: contratoActivo.de,
+                    sueldo: contratoActivo.sueldo,
+                    tasa: contratoActivo.tasa,
                 }
+                await savedTrabajador.save()
+
+                EmitirTrabajador();
             } catch (err) {
                 socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'No se pudo registrar el trabajador', icon: 'error' });
                 console.log('Error en el registro del trabajador', err);
@@ -123,6 +155,36 @@ export default(socket, io) => {
         }catch(err){
             socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Error en la eliminación del trabajador', icon: 'error' });
             console.log('Error en la eliminación del trabajador', err)
+        }
+    })
+
+    socket.on('CLIENTE:DarDeBajaTrabajador', async (data) => {
+        try{
+            await trabajador.findByIdAndUpdate(data._id, {borrado:true})
+            try{
+                EmitirTrabajador();
+                socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se dio de baja al trabajador', icon: 'info' });
+            }catch(err){
+                console.log(err)
+            }
+        }catch(err){
+            socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Error al dar de baja al trabajador', icon: 'error' });
+            console.log('Error al dar de baja al trabajador', err)
+        }
+    })
+
+    socket.on('CLIENTE:ReactivarTrabajador', async (data) => {
+        try{
+            await trabajador.findByIdAndUpdate(data._id, {borrado:false})
+            try{
+                EmitirTrabajador();
+                socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se reactivó al trabajador', icon: 'success' });
+            }catch(err){
+                console.log(err)
+            }
+        }catch(err){
+            socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Error al reactivar al trabajador', icon: 'error' });
+            console.log('Error al reactivar al trabajador', err)
         }
     })
 }

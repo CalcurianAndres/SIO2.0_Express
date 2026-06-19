@@ -62,19 +62,27 @@ OrdenPoligraficaSchema.pre('save', function(next){
     var doc = this;
     var counterId = getCounterId();
     var seqInicial = getSeqInicial();
+
+    // Fase 1: Crear contador si no existe (solo $setOnInsert — sin conflicto con $inc)
     OCPI.findOneAndUpdate(
-        {_id: counterId},
-        {
-            $inc: {seq: 1},
-            $setOnInsert: {_id: counterId, seq: seqInicial}
-        },
-        {new: true, upsert: true}
-    ).then(function(counter) {
+        { _id: counterId },
+        { $setOnInsert: { _id: counterId, seq: seqInicial } },
+        { upsert: true, new: true }
+    ).then(function() {
+        // Fase 2: Incrementar contador (solo $inc — sin conflicto con $setOnInsert)
+        return OCPI.findOneAndUpdate(
+            { _id: counterId },
+            { $inc: { seq: 1 } },
+            { new: true }
+        );
+    }).then(function(counter) {
+        if (!counter) {
+            return next(new Error('No se pudo generar el correlativo: contador nulo'));
+        }
         doc.numero = counter.seq;
         next();
-    })
-    .catch(function(error) {
-        throw error;
+    }).catch(function(error) {
+        next(error);
     });
 });
 
