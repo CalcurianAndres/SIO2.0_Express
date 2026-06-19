@@ -122,7 +122,11 @@ export default (socket, io) => {
 
         socket.on('CLIENTE:EliminarSubUnidad', async (data) => {
             try{
-                await areas.findByIdAndUpdate(data._id, {borrado:true})
+                await areas.updateMany(
+                    { sup: data.nombre, departamento: data.departamento },
+                    { borrado: true }
+                );
+                await areas.findByIdAndUpdate(data._id, {borrado:true});
                 try{
                     EmitirAreas();
                     socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se eliminó la subunidad', icon: 'info' });
