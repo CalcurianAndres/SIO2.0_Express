@@ -8,6 +8,10 @@ let TrabajadorSchema = new Schema([{
     type:Boolean,
     default:false,
   },
+  fechaBaja:{
+    type:Date,
+    default:null,
+  },
   datos_personales: {
     apellidos: { type: String, },
     nombres: { type: String, },

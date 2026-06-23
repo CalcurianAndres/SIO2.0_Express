@@ -160,9 +160,15 @@ export default(socket, io) => {
 
     socket.on('CLIENTE:DarDeBajaTrabajador', async (data) => {
         try{
-            await trabajador.findByIdAndUpdate(data._id, {borrado:true})
+            await trabajador.findByIdAndUpdate(data._id, {borrado:true, fechaBaja: new Date()})
             try{
-                EmitirTrabajador();
+                // Re-fetchear y emitir SOLO a este socket
+                const trabActualizados = await trabajador.find({})
+                                                .populate('contratacion.departamento')
+                                                .populate('contratacion.cargo')
+                                                .populate('contratacion.de')
+                                                .exec()
+                socket.emit('SERVER:Trabajador', trabActualizados)
                 socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se dio de baja al trabajador', icon: 'info' });
             }catch(err){
                 console.log(err)
@@ -175,9 +181,15 @@ export default(socket, io) => {
 
     socket.on('CLIENTE:ReactivarTrabajador', async (data) => {
         try{
-            await trabajador.findByIdAndUpdate(data._id, {borrado:false})
+            await trabajador.findByIdAndUpdate(data._id, {borrado:false, fechaBaja: null})
             try{
-                EmitirTrabajador();
+                // Re-fetchear y emitir SOLO a este socket
+                const trabActualizados = await trabajador.find({})
+                                                .populate('contratacion.departamento')
+                                                .populate('contratacion.cargo')
+                                                .populate('contratacion.de')
+                                                .exec()
+                socket.emit('SERVER:Trabajador', trabActualizados)
                 socket.emit('SERVIDOR:enviaMensaje', { mensaje: 'Se reactivó al trabajador', icon: 'success' });
             }catch(err){
                 console.log(err)
