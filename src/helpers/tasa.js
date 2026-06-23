@@ -40,11 +40,9 @@ const fetchExternalRate = (url) => {
 const extractRate = (payload) => {
   if (payload === null || payload === undefined) return null;
 
-  // Si el payload es directamente un número
   if (typeof payload === 'number' && payload > 0) return payload;
 
-  // Buscar campos comunes en APIs de tasas
-  const keys = ['tasa', 'rate', 'precio', 'price', 'valor', 'value', 'USD', 'usd'];
+  const keys = ['tasa', 'rate', 'precio', 'price', 'valor', 'value', 'USD', 'usd', 'promedio'];
   for (const key of keys) {
     if (typeof payload[key] === 'number' && payload[key] > 0) {
       return payload[key];
@@ -55,7 +53,6 @@ const extractRate = (payload) => {
     }
   }
 
-  // Buscar recursivamente en un nivel de anidación
   for (const key in payload) {
     const child = payload[key];
     if (child && typeof child === 'object') {
@@ -77,40 +74,46 @@ const extractRate = (payload) => {
 export const obtenerTasaActual = async () => {
   try {
     const today = new Date();
-    const tasaDelDia = await Tasa.findOne({
-      fecha: { $gte: startOfDay(today), $lte: endOfDay(today) },
-    }).sort({ fecha: -1 });
 
-    if (tasaDelDia) {
+    // 1) SIEMPRE intentar la API primero para tener la tasa más reciente del día.
+    if (TASA_API_URL) {
+      try {
+        const payload = await fetchExternalRate(TASA_API_URL);
+        const rate = extractRate(payload);
+
+        if (rate) {
+          // Si la tasa de la API difiere de la última guardada, actualizar.
+          const ultima = await Tasa.findOne({ fuente: 'api' }).sort({ fecha: -1 });
+          if (!ultima || ultima.tasa !== rate) {
+            const nuevaTasa = new Tasa({ tasa: rate, fuente: 'api' });
+            await nuevaTasa.save();
+            console.log(`✅ Tasa actualizada desde API: ${rate}`);
+          }
+          return {
+            tasa: rate,
+            fuente: 'api',
+            fecha: new Date(),
+            manual: false,
+          };
+        }
+      } catch (apiErr) {
+        console.warn('⚠️ No se pudo obtener tasa de la API, usando fallback DB:', apiErr.message);
+      }
+    }
+
+    // 2) Fallback: buscar la última tasa guardada (manual o api) en DB.
+    const ultimaGuardada = await Tasa.findOne().sort({ fecha: -1 });
+    if (ultimaGuardada) {
       return {
-        tasa: tasaDelDia.tasa,
-        fuente: tasaDelDia.fuente,
-        fecha: tasaDelDia.fecha,
-        manual: tasaDelDia.fuente === 'manual',
+        tasa: ultimaGuardada.tasa,
+        fuente: ultimaGuardada.fuente,
+        fecha: ultimaGuardada.fecha,
+        manual: ultimaGuardada.fuente === 'manual',
       };
     }
 
-    if (!TASA_API_URL) {
-      return { tasa: null, fuente: null, fecha: null, manual: true };
-    }
-
-    const payload = await fetchExternalRate(TASA_API_URL);
-    const rate = extractRate(payload);
-
-    if (!rate) {
-      console.warn('⚠️ No se pudo extraer la tasa de la API externa.');
-      return { tasa: null, fuente: null, fecha: null, manual: true };
-    }
-
-    const nuevaTasa = new Tasa({ tasa: rate, fuente: 'api' });
-    await nuevaTasa.save();
-
-    return {
-      tasa: nuevaTasa.tasa,
-      fuente: nuevaTasa.fuente,
-      fecha: nuevaTasa.fecha,
-      manual: false,
-    };
+    // 3) Sin datos: devolver null para input manual.
+    return { tasa: null, fuente: null, fecha: null, manual: true };
   } catch (err) {
     console.warn('⚠️ Error al obtener tasa actual:', err.message);
     return { tasa: null, fuente: null, fecha: null, manual: true };

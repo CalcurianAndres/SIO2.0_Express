@@ -9,5 +9,6 @@ app.use ( require('./subscription.routes'));
 app.use ( require('./etiquetas.routes'));
 app.use ( require('./proxy.routes'));
 app.use('/api/pantones', require('./pantone.routes'));
+app.use('/api/tasa-cambio', require('./tasaCambio.routes'));
 
 module.exports = app;

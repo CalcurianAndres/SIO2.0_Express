@@ -1,4 +1,3 @@
-mongoose
 const mongoose = require('mongoose');
 
 const analisisSustratoSchema = new mongoose.Schema({
